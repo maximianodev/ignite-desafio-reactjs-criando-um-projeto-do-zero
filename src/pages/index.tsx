@@ -1,9 +1,11 @@
 import { GetStaticProps } from 'next';
+import Prismic from '@prismicio/client';
+import ApiSearchResponse from '@prismicio/client/types/ApiSearchResponse';
 
 import { getPrismicClient } from '../services/prismic';
 
-import commonStyles from '../styles/common.module.scss';
-import styles from './home.module.scss';
+// import commonStyles from '../styles/common.module.scss';
+// import styles from './home.module.scss';
 
 interface Post {
   uid?: string;
@@ -24,13 +26,34 @@ interface HomeProps {
   postsPagination: PostPagination;
 }
 
-// export default function Home() {
-//   // TODO
-// }
+export default function Home({ postsPagination }: HomeProps): JSX.Element {
+  return (
+    <div>
+      {postsPagination.results.map((post: Post) => (
+        <div key={post.uid}>
+          <h2>{post.data.title}</h2>
+          <p>{post.data.subtitle}</p>
+          <div>
+            <time dateTime={post.first_publication_date}>
+              {post.first_publication_date}
+            </time>
+            <span>{post.data.author}</span>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
 
-// export const getStaticProps = async () => {
-//   // const prismic = getPrismicClient();
-//   // const postsResponse = await prismic.query(TODO);
+export const getStaticProps: GetStaticProps = async () => {
+  const prismic = getPrismicClient();
+  const postsPagination: ApiSearchResponse = await prismic.query(
+    Prismic.predicates.at('document.type', 'post'),
+    {
+      fetch: ['post.title', 'post.subtitle', 'post.author'],
+      pageSize: 100,
+    }
+  );
 
-//   // TODO
-// };
+  return { props: { postsPagination } };
+};
