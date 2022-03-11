@@ -1,1 +1,39 @@
 // TODO
+.postsPage {
+  .post {
+    a {
+      text-decoration: none;
+    }
+    h2 {
+      margin-bottom: .75rem;
+    }
+    p {
+      margin-bottom: .75rem;
+    }
+    .date {
+      time {
+        margin-right: 2rem;
+        line-height: 1;
+        display: flex;
+        align-items: center;
+        svg {
+          margin-right: .3rem;
+        }
+      }
+
+      > span {
+        line-height: 1;
+        margin-top: .5rem;
+        display: flex;
+        align-items: center;
+        line-height: 1;
+        svg {
+          margin-right: .3rem;
+        }
+      }
+    }
+    + .post {
+      margin-top: 2.5rem;
+    }
+  }
+}

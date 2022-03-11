@@ -1,11 +1,18 @@
 import { GetStaticProps } from 'next';
+import Link from 'next/link';
 import Prismic from '@prismicio/client';
 import ApiSearchResponse from '@prismicio/client/types/ApiSearchResponse';
+// import commonStyles from '../styles/common.module.scss';
+
+import { format } from 'date-fns';
+import ptBR from 'date-fns/locale/pt-BR';
+
+import { FiCalendar } from 'react-icons/fi';
+import { FiUser } from 'react-icons/fi';
 
 import { getPrismicClient } from '../services/prismic';
 
-// import commonStyles from '../styles/common.module.scss';
-// import styles from './home.module.scss';
+import styles from './home.module.scss';
 
 interface Post {
   uid?: string;
@@ -28,19 +35,33 @@ interface HomeProps {
 
 export default function Home({ postsPagination }: HomeProps): JSX.Element {
   return (
-    <div>
+    <div className={`${styles.postsPage} container`}>
       {postsPagination.results.map((post: Post) => (
-        <div key={post.uid}>
-          <h2>{post.data.title}</h2>
-          <p>{post.data.subtitle}</p>
-          <div>
-            <time dateTime={post.first_publication_date}>
-              {post.first_publication_date}
-            </time>
-            <span>{post.data.author}</span>
-          </div>
+        <div key={post.uid} className={`${styles.post}`}>
+          <Link href={`/post/${post.uid}`}>
+            <a>
+              <h2>{post.data.title}</h2>
+              <p>{post.data.subtitle}</p>
+              <div className={`${styles.date}`}>
+                <time dateTime={post.first_publication_date}>
+                  <FiCalendar size={16} />
+                  {format(new Date(post.first_publication_date), 'd MMM yyyy', {
+                    locale: ptBR,
+                  })}
+                </time>
+                <span>
+                  <FiUser size={16} />
+                  {post.data.author}
+                </span>
+              </div>
+            </a>
+          </Link>
         </div>
       ))}
+
+      {postsPagination.next_page && (
+        <button type="button">Carregar mais</button>
+      )}
     </div>
   );
 }
@@ -51,7 +72,7 @@ export const getStaticProps: GetStaticProps = async () => {
     Prismic.predicates.at('document.type', 'post'),
     {
       fetch: ['post.title', 'post.subtitle', 'post.author'],
-      pageSize: 100,
+      pageSize: 4,
     }
   );
 
