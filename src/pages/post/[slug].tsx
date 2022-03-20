@@ -6,10 +6,18 @@ import ApiSearchResponse from '@prismicio/client/types/ApiSearchResponse';
 import { FiCalendar, FiUser, FiClock } from 'react-icons/fi';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { useRouter } from 'next/router';
 import { getPrismicClient } from '../../services/prismic';
 
 import commonStyles from '../../styles/common.module.scss';
 import styles from './post.module.scss';
+
+interface PostContent {
+  heading: string;
+  body: {
+    text: string;
+  }[];
+}
 
 interface Post {
   first_publication_date: string | null;
@@ -19,12 +27,7 @@ interface Post {
       url: string;
     };
     author: string;
-    content: {
-      heading: string;
-      body: {
-        text: string;
-      }[];
-    }[];
+    content: PostContent[];
   };
 }
 
@@ -33,7 +36,26 @@ interface PostProps {
 }
 
 export default function Post({ post }: PostProps): JSX.Element {
-  console.log('🚀 ~ file: [slug].tsx ~ line 35 ~ Post ~ post', post);
+  const router = useRouter();
+
+  const readTime = post.data.content.reduce((acc, content) => {
+    const body = RichText.asText(content.body);
+    const bodyLength = body.split(' ').length;
+    const numberOfWordsReadPerHumanMinute = 200;
+    const readingTime = Math.ceil(bodyLength / numberOfWordsReadPerHumanMinute);
+    return acc + readingTime;
+  }, 0);
+
+  const firstPublicationDate = format(
+    new Date(post.first_publication_date),
+    'dd MMM yyyy',
+    {
+      locale: ptBR,
+    }
+  );
+
+  if (router.isFallback) return <div>Carregando...</div>;
+
   return (
     <div className={styles.post}>
       <img src={post.data.banner.url} alt={post.data.title} />
@@ -43,27 +65,33 @@ export default function Post({ post }: PostProps): JSX.Element {
           <div className={styles.additionalInfo}>
             <time dateTime={post.first_publication_date}>
               <FiCalendar size={16} />
-              {format(new Date(post.first_publication_date), 'd MMM yyyy', {
-                locale: ptBR,
-              })}
+              {firstPublicationDate}
             </time>
+
             <span>
               <FiUser size={16} />
               {post.data.author}
             </span>
+
             <span>
               <FiClock size={16} />
-              {post.data.content.reduce((acc, content) => {
-                const body = RichText.asText(content.body);
-                const bodyLength = body.split(' ').length;
-                const numberOfWordsReadPerHumanMinute = 200;
-                const readingTime = Math.ceil(
-                  bodyLength / numberOfWordsReadPerHumanMinute
-                );
-                return acc + readingTime;
-              }, 0)}
-              Min
+              {readTime} min
             </span>
+          </div>
+          <div className={styles.postContent}>
+            {post.data.content.map((postContent: PostContent) => {
+              return (
+                <div key={postContent.heading}>
+                  <h2>{postContent.heading}</h2>
+                  <div
+                    // eslint-disable-next-line react/no-danger
+                    dangerouslySetInnerHTML={{
+                      __html: RichText.asHtml(postContent.body),
+                    }}
+                  />
+                </div>
+              );
+            })}
           </div>
         </div>
       </div>
@@ -84,7 +112,7 @@ export const getStaticPaths: GetStaticPaths = async () => {
   }));
 
   return {
-    fallback: 'blocking',
+    fallback: true,
     paths: postFiltered,
   };
 };
@@ -97,5 +125,8 @@ export const getStaticProps: GetStaticProps = async context => {
   const prismic = getPrismicClient();
   const response = await prismic.getByUID('post', slug as string, {});
 
-  return { props: { post: response } };
+  return {
+    props: { post: response },
+    revalidate: 60 * 5, // 5 minutes
+  };
 };
